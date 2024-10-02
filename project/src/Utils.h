@@ -31,23 +31,27 @@ namespace dae
 			float t0 = tca - thc;
 			float t1 = tca + thc;
 
-			Vector3 point{ ray.origin + t0 * ray.direction };
-			Vector3 point2{ ray.origin + t1 * ray.direction };
-
-			if (Vector3(ray.direction,point).SqrMagnitude() > Vector3(ray.direction, point2).SqrMagnitude())
+			if (t0 >= ray.min && t0 < ray.max && t1 >= ray.min && t1 < ray.max)
 			{
-				hitRecord.origin = Vector3(ray.direction, point2);
-				hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point2)).Normalized();
-				hitRecord.t = t1;
-				return true;
+				Vector3 point{ ray.origin + t0 * ray.direction };
+				Vector3 point2{ ray.origin + t1 * ray.direction };
+
+				if (Vector3(ray.direction, point).SqrMagnitude() > Vector3(ray.direction, point2).SqrMagnitude())
+				{
+					hitRecord.origin = Vector3(ray.direction, point2);
+					hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point2)).Normalized();
+					hitRecord.t = t1;
+					return true;
+				}
+				if (Vector3(ray.direction, point).SqrMagnitude() < Vector3(ray.direction, point2).SqrMagnitude())
+				{
+					hitRecord.origin = Vector3(ray.direction, point);
+					hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point)).Normalized();
+					hitRecord.t = t0;
+					return true;
+				}
+
 			}
-
-			hitRecord.origin = Vector3(ray.direction, point);
-			hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point)).Normalized();
-			hitRecord.t = t0;
-			return true;
-			
-
 			
 		}
 
@@ -63,7 +67,7 @@ namespace dae
 		{
 			float t = Vector3::Dot(plane.origin - ray.origin, plane.normal) / Vector3::Dot(ray.direction ,plane.normal);
 
-			if (t >= 0)
+			if (t >= ray.min && t < ray.max)
 			{
 				hitRecord.didHit = true;
 				hitRecord.t = t;

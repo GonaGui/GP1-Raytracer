@@ -23,6 +23,8 @@ Renderer::Renderer(SDL_Window * pWindow) :
 	SDL_GetWindowSize(pWindow, &m_Width, &m_Height);
 	m_AspectRatio = (m_Width / float(m_Height)) ;
 	m_pBufferPixels = static_cast<uint32_t*>(m_pBuffer->pixels);
+
+
 }
 
 void Renderer::Render(Scene* pScene) const
@@ -30,6 +32,8 @@ void Renderer::Render(Scene* pScene) const
 	Camera& camera = pScene->GetCamera();
 	auto& materials = pScene->GetMaterials();
 	auto& lights = pScene->GetLights();
+
+	const Matrix cameraToWorld = camera.CalculateCameraToWorld();
 
 	for (int px{}; px < m_Width; ++px)
 	{
@@ -41,11 +45,13 @@ void Renderer::Render(Scene* pScene) const
 
 
 			//creates a vector that holds a coordinate in 3D space dependent on which pixel the loop is on
-			Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio),float(1 - 2 * ((py + 0.5) / m_Height)),1};
+			Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio * camera.FOV),float((1 - 2 * ((py + 0.5) / m_Height)) * camera.FOV),1};
 			rayDirection.Normalize();
+			rayDirection = cameraToWorld.TransformVector(rayDirection);
+		
 
 			//Creates a Ray from origin to the point where the current pixel in loop is
-			Ray viewRay{ {0,0,0},rayDirection};
+			Ray viewRay{ camera.origin,rayDirection };
 
 			//Sets screen to black
 			ColorRGB finalColor{ };
