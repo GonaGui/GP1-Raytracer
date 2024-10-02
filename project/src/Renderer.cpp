@@ -39,35 +39,37 @@ void Renderer::Render(Scene* pScene) const
 	{
 		for (int py{}; py < m_Height; ++py)
 		{
-			//float gradient = px / static_cast<float>(m_Width);
-			//gradient += py / static_cast<float>(m_Width);
-			//gradient /= 2.0f;
 
+			//Sets screen to black
+			ColorRGB finalColor{ };
 
 			//creates a vector that holds a coordinate in 3D space dependent on which pixel the loop is on
 			Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio * camera.FOV),float((1 - 2 * ((py + 0.5) / m_Height)) * camera.FOV),1};
 			rayDirection.Normalize();
 			rayDirection = cameraToWorld.TransformVector(rayDirection);
-		
 
 			//Creates a Ray from origin to the point where the current pixel in loop is
 			Ray viewRay{ camera.origin,rayDirection };
 
-			//Sets screen to black
-			ColorRGB finalColor{ };
-
 			HitRecord closestHit{};
 			pScene->GetClosestHit(viewRay, closestHit);
 
-			////Makes a tempSphere
-			//Sphere testSphere{ {0.f,0.f,100.f},50.f,0 };
-
-			////Perform Sphere HitTest
-			//GeometryUtils::HitTest_Sphere(testSphere, viewRay, closestHit);
 
 			if (closestHit.didHit)
 			{
 				finalColor = materials[closestHit.materialIndex]->Shade();
+
+
+				for (int idx{ 0 }; idx < lights.size(); idx++)
+				{
+					Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx],closestHit.origin);
+					Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec.Normalized(), 0.0001, lightVec.Magnitude());
+
+					if (pScene->DoesHit(shadowRay))
+					{
+						finalColor *= 0.5;
+					}
+				}
 
 				//const float scaled_t = (closestHit.t - 50.f) / 40.f; //shades spheres based on proximity
 				//finalColor = { scaled_t,scaled_t,scaled_t };

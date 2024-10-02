@@ -28,16 +28,18 @@ namespace dae {
 
 	void dae::Scene::GetClosestHit(const Ray& ray, HitRecord& closestHit) const
 	{
+		HitRecord tempHit {};
+
 		//Checks through all the sphere
 		for (int idx{0};m_SphereGeometries.size() > idx;idx++)
 		{
-			HitRecord tempHit;
 
 			if (GeometryUtils::HitTest_Sphere(m_SphereGeometries[idx], ray, tempHit))  // Check if there's a hit from spheres
 			{
 				if (tempHit.t < closestHit.t)  
 				{
-					closestHit = tempHit;  
+					closestHit = tempHit;
+
 				}
 			}
 			
@@ -46,8 +48,6 @@ namespace dae {
 		//Checks through all the planes
 		for (int idx{ 0 }; m_PlaneGeometries.size() > idx; idx++)
 		{
-			HitRecord tempHit;
-
 			if (GeometryUtils::HitTest_Plane(m_PlaneGeometries[idx],ray,tempHit))  // Check if there's a hit from planes
 			{
 				if (tempHit.t < closestHit.t)
@@ -56,12 +56,31 @@ namespace dae {
 				}
 			}
 		}
+
+		tempHit = closestHit;
 	}
 
 	bool Scene::DoesHit(const Ray& ray) const
 	{
-		//todo W2
-		throw std::runtime_error("Not Implemented Yet");
+		//Checks through all the sphere
+		for (int idx{ 0 }; m_SphereGeometries.size() > idx; idx++)
+		{
+			if (GeometryUtils::HitTest_Sphere(m_SphereGeometries[idx], ray))  // Check if there's a hit from spheres
+			{
+				return true;
+			}
+		}
+
+
+		for (int idx{ 0 }; idx < m_PlaneGeometries.size(); ++idx)
+		{
+			if (GeometryUtils::HitTest_Plane(m_PlaneGeometries[idx], ray))
+			{
+				return true;
+			}
+
+		}
+	
 		return false;
 	}
 
@@ -186,7 +205,7 @@ namespace dae {
 
 
 
-		AddSphere({ 0.f,5.f,0.f }, .75f, matId_Solid_Porple);
+		/*AddSphere({ 0.f,5.f,0.f }, .75f, matId_Solid_Porple);*/
 
 		//Light
 		AddPointLight({ 0.f,5.f,-5.f }, 70.f, colors::White);

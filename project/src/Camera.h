@@ -39,13 +39,10 @@ namespace dae
 
 		Matrix CalculateCameraToWorld()
 		{
+			right = Vector3::Cross(Vector3::UnitY, Camera::forward);
+			up = Vector3::Cross(Camera::forward, right);
 
-			Vector4 Right{ Vector3{}.Cross(Vector3::UnitY,forward).Normalized() ,0 };
-			Vector4 Up{ Vector3{}.Cross(forward,Right).Normalized(),0 };
-			Vector4 TVec{ origin ,1 };
-			Matrix Onb{ Right,Up,forward, TVec };
-
-			return Onb;
+			return Matrix(right, up, Camera::forward, Camera::origin);
 		}
 
 		void Update(Timer* pTimer)
@@ -61,22 +58,6 @@ namespace dae
 
 			SDL_Event event;
 
-			//if (SDL_PollEvent(&event))
-			//{
-			//	if (SDL_MOUSEMOTION == event.type)
-			//	{
-			//		int x, y;
-
-			//		SDL_GetMouseState(&x, &y);
-
-			//		forward = Matrix::CreateRotation(x * rotSpeed * pTimer->GetElapsed(), y * rotSpeed * pTimer->GetElapsed(), 1).TransformVector(forward);
-			//	}
-			//}
-			//
-
-
-			
-
 			const float deltaTime = pTimer->GetElapsed();
 
 			//Keyboard Input
@@ -86,50 +67,23 @@ namespace dae
 			int mouseX{}, mouseY{};
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
-
-			// Move Forward
-			if (pKeyboardState[SDL_SCANCODE_W])
-			{
-				Matrix forwardMovement = Matrix::CreateTranslation(0, 0, movSpeed);
-				origin = forwardMovement.TransformPoint(origin);
-			}
-
-			// Move Backward
-			if (pKeyboardState[SDL_SCANCODE_S])
-			{
-				Matrix backwardMovement = Matrix::CreateTranslation(0, 0, -movSpeed);
-				origin = backwardMovement.TransformPoint(origin);
-			}
-
-			// Strafe Left
-			if (pKeyboardState[SDL_SCANCODE_A])
-			{
-				Matrix leftMovement = Matrix::CreateTranslation(-movSpeed, 0, 0);
-				origin = leftMovement.TransformPoint(origin);
-			}
-
-			// Strafe Right
-			if (pKeyboardState[SDL_SCANCODE_D])
-			{
-				Matrix rightMovement = Matrix::CreateTranslation(movSpeed, 0, 0);
-				origin = rightMovement.TransformPoint(origin);
-			}
-
-			
 			// Process mouse movements (relative to the last frame)
 			if (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
 			{
 				
 				if (mouseX != 0 || mouseY != 0)
 				{
+					totalPitch = mouseY / rotSpeed * deltaTime;
+					totalYaw = mouseX / rotSpeed * deltaTime;
+
 					if (forward.z < 0)
 					{
-						forward = Matrix::CreateRotation(-(mouseY / rotSpeed) * deltaTime, (mouseX / rotSpeed) * deltaTime, 0).TransformVector(forward);
+						forward = Matrix::CreateRotation(-totalPitch, totalYaw, 0).TransformVector(forward).Normalized();
 					}
 
 					else
 					{
-						forward = Matrix::CreateRotation((mouseY / rotSpeed) * deltaTime, (mouseX / rotSpeed) * deltaTime, 0).TransformVector(forward);
+						forward = Matrix::CreateRotation(totalPitch, totalYaw, 0).TransformVector(forward).Normalized();
 					}
 					
 				}
@@ -137,30 +91,58 @@ namespace dae
 
 
 
-			/*		Vector3 moveVector = forward.Normalized() * movSpeed * deltaTime;;
+			Vector3 forwardVec = forward.Normalized() * movSpeed * deltaTime;
 
-					Vector3 rightVector = Vector3{}.Cross(up , forward).Normalized() * movSpeed * deltaTime;
+			Vector3 rightVector = Vector3{}.Cross(up , forward).Normalized() * movSpeed * deltaTime;
 
-					if (pKeyboardState[SDL_SCANCODE_W])
-					{
-						origin += moveVector;
-					}
+			Vector3 upVector = Vector3{}.Cross(forward,right).Normalized() * movSpeed * deltaTime;
 
-					if (pKeyboardState[SDL_SCANCODE_S])
-					{
-						origin -= moveVector;
-					}
+			if (pKeyboardState[SDL_SCANCODE_W])
+			{
+				origin += forwardVec;
+			}
 
-					if (pKeyboardState[SDL_SCANCODE_D])
-					{
-						origin += rightVector;
-					}
+			if (pKeyboardState[SDL_SCANCODE_S])
+			{
+				origin -= forwardVec;
+			}
 
-					if (pKeyboardState[SDL_SCANCODE_A])
-					{
-						origin -= rightVector;
-					}*/
+			if (pKeyboardState[SDL_SCANCODE_D])
+			{
+				origin += rightVector;
+			}
 
+			if (pKeyboardState[SDL_SCANCODE_A])
+			{
+				origin -= rightVector;
+			}
+
+			if (pKeyboardState[SDL_SCANCODE_SPACE])
+			{
+				if (forward.z < 0)
+				{
+					origin -= upVector;
+				}
+
+				else
+				{
+					origin += upVector;
+				}
+				
+			}
+
+			if (pKeyboardState[SDL_SCANCODE_LSHIFT])
+			{
+				if (forward.z < 0)
+				{
+					origin += upVector;
+				}
+
+				else
+				{
+					origin -= upVector;
+				}
+			}
 
 		}
 	};

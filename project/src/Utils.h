@@ -28,30 +28,25 @@ namespace dae
 
 			float thc{ float(sqrt(sphere.radius*sphere.radius - od)) };
 
-			float t0 = tca - thc;
-			float t1 = tca + thc;
-
-			if (t0 >= ray.min && t0 < ray.max && t1 >= ray.min && t1 < ray.max)
+			float t = tca - thc;
+			if (t > ray.min and t < ray.max);
+			else
 			{
-				Vector3 point{ ray.origin + t0 * ray.direction };
-				Vector3 point2{ ray.origin + t1 * ray.direction };
-
-				if (Vector3(ray.direction, point).SqrMagnitude() > Vector3(ray.direction, point2).SqrMagnitude())
-				{
-					hitRecord.origin = Vector3(ray.direction, point2);
-					hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point2)).Normalized();
-					hitRecord.t = t1;
-					return true;
-				}
-				if (Vector3(ray.direction, point).SqrMagnitude() < Vector3(ray.direction, point2).SqrMagnitude())
-				{
-					hitRecord.origin = Vector3(ray.direction, point);
-					hitRecord.normal = Vector3(sphere.origin, Vector3(ray.direction, point)).Normalized();
-					hitRecord.t = t0;
-					return true;
-				}
-
+				t = tca + thc;
+				if (t > ray.min and t < ray.max);
+				else return false;
 			}
+
+			if (!ignoreHitRecord)
+			{
+				hitRecord.t = t;
+				hitRecord.didHit = true;
+				hitRecord.origin = ray.origin + hitRecord.t * ray.direction;
+				hitRecord.normal = (hitRecord.origin - sphere.origin).Normalized();
+				hitRecord.materialIndex = sphere.materialIndex;
+			}
+			return true;
+				
 			
 		}
 
@@ -60,6 +55,7 @@ namespace dae
 			HitRecord temp{};
 			return HitTest_Sphere(sphere, ray, temp, true);
 		}
+
 #pragma endregion
 #pragma region Plane HitTest
 		//PLANE HIT-TESTS
@@ -126,9 +122,8 @@ namespace dae
 		//Direction from target to light
 		inline Vector3 GetDirectionToLight(const Light& light, const Vector3 origin)
 		{
-			//todo W3
-			throw std::runtime_error("Not Implemented Yet");
-			return {};
+			Vector3 lightVec(origin, light.origin);
+			return lightVec;
 		}
 
 		inline ColorRGB GetRadiance(const Light& light, const Vector3& target)
