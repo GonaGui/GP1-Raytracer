@@ -21,7 +21,7 @@ namespace dae
 
 
 		Vector3 origin{};
-		float fovAngle{ 90.f };
+		float fovAngle{ 45.f };
 		float previousfovAngle{ fovAngle };
 		float FOV{ tan((fovAngle * (PI / 180)) / 2) };
 		float rotSpeed{10};
@@ -39,10 +39,10 @@ namespace dae
 
 		Matrix CalculateCameraToWorld()
 		{
-			right = Vector3::Cross(Vector3::UnitY, Camera::forward);
-			up = Vector3::Cross(Camera::forward, right);
+			right = Vector3::Cross(Vector3::UnitY,forward).Normalized();
+			up = Vector3::Cross(forward, right).Normalized();
 
-			return Matrix(right, up, Camera::forward, Camera::origin);
+			return Matrix(right, up, forward, origin);
 		}
 
 		void Update(Timer* pTimer)

@@ -54,22 +54,53 @@ void Renderer::Render(Scene* pScene) const
 			HitRecord closestHit{};
 			pScene->GetClosestHit(viewRay, closestHit);
 
-
 			if (closestHit.didHit)
 			{
-				finalColor = materials[closestHit.materialIndex]->Shade();
-
-
+				
 				for (int idx{ 0 }; idx < lights.size(); idx++)
 				{
-					Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx],closestHit.origin);
-					Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec.Normalized(), 0.0001, lightVec.Magnitude());
+					Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx], closestHit.origin);
+					float maxRayLenght = lightVec.Normalize();
+					Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec, 0.0001f, maxRayLenght);
+					bool shadowDoesHit = pScene->DoesHit(shadowRay);
+					float observedArea = Vector3::Dot(closestHit.normal, lightVec);
 
-					if (pScene->DoesHit(shadowRay))
+					if (observedArea > 0.f)
 					{
-						finalColor *= 0.5;
+
+						if (!m_ShadowsEnabled or (m_ShadowsEnabled && !shadowDoesHit))
+						{
+							if (m_CurrentLightingMode == LightingMode::ObservedArea)
+							{
+								finalColor += ColorRGB{ observedArea,observedArea,observedArea };
+							}
+
+							if (m_CurrentLightingMode == LightingMode::Radiance)
+							{
+								finalColor += LightUtils::GetRadiance(lights[idx], closestHit.origin);
+							}
+
+							if (m_CurrentLightingMode == LightingMode::BRDF)
+							{
+								finalColor += materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+							}
+
+							if (m_CurrentLightingMode == LightingMode::Combined)
+							{
+								ColorRGB ObservedArea = ColorRGB{ observedArea, observedArea,observedArea};
+
+								ColorRGB Radiance = LightUtils::GetRadiance(lights[idx], closestHit.origin);
+
+								ColorRGB BRDF = materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+
+								finalColor += Radiance * BRDF * ObservedArea;
+							}
+
+						}
 					}
+
 				}
+				
 
 				//const float scaled_t = (closestHit.t - 50.f) / 40.f; //shades spheres based on proximity
 				//finalColor = { scaled_t,scaled_t,scaled_t };

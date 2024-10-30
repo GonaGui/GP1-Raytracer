@@ -51,6 +51,9 @@ namespace dae
 		std::vector<Light> m_Lights{};
 		std::vector<Material*> m_Materials{};
 
+		//Temp (Individual Triangle Test)
+		std::vector<Triangle> m_Triangles{};
+
 		Camera m_Camera{};
 
 
@@ -92,6 +95,59 @@ namespace dae
 		Scene_W2& operator=(Scene_W2&&) noexcept = delete;
 
 		void Initialize() override;
+	};
+
+	//WEEK 3 Test Scene
+	class Scene_W3 final : public Scene
+	{
+	public:
+		Scene_W3() = default;
+		~Scene_W3() override = default;
+
+		Scene_W3(const Scene_W3&) = delete;
+		Scene_W3(Scene_W3&&) noexcept = delete;
+		Scene_W3& operator=(const Scene_W3&) = delete;
+		Scene_W3& operator=(Scene_W3&&) noexcept = delete;
+
+		void Initialize() override;
+	};
+
+	//WEEK 4 Test Scene
+	class Scene_W4 final : public Scene
+	{
+	public:
+		Scene_W4() = default;
+		~Scene_W4() override = default;
+
+		Scene_W4(const Scene_W4&) = delete;
+		Scene_W4(Scene_W4&&) noexcept = delete;
+		Scene_W4& operator=(const Scene_W4&) = delete;
+		Scene_W4& operator=(Scene_W4&&) noexcept = delete;
+
+		void Initialize() override;
+		void Update(dae::Timer* pTimer) override;
+
+	private:
+		TriangleMesh* pMesh{ nullptr };
+	};
+
+
+	//WEEK 4 Test Scene
+	class Scene_W4_ReferenceScene final : public Scene
+	{
+	public:
+		Scene_W4_ReferenceScene() = default;
+		~Scene_W4_ReferenceScene() override = default;
+
+		Scene_W4_ReferenceScene(const Scene_W4_ReferenceScene&) = delete;
+		Scene_W4_ReferenceScene(Scene_W4_ReferenceScene&&) noexcept = delete;
+		Scene_W4_ReferenceScene& operator=(const Scene_W4_ReferenceScene&) = delete;
+		Scene_W4_ReferenceScene& operator=(Scene_W4_ReferenceScene&&) noexcept = delete;
+
+		void Initialize() override;
+		void Update(dae::Timer* pTimer) override;
+	private:
+		TriangleMesh* m_Meshes[3]{  };
 	};
 
 

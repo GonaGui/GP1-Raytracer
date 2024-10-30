@@ -59,9 +59,7 @@ namespace dae
 
 		ColorRGB Shade(const HitRecord& hitRecord = {}, const Vector3& l = {}, const Vector3& v = {}) override
 		{
-			//todo: W3
-			throw std::runtime_error("Not Implemented Yet");
-			return {};
+			return BRDF::Lambert(m_DiffuseReflectance, m_DiffuseColor);
 		}
 
 	private:
@@ -84,9 +82,8 @@ namespace dae
 
 		ColorRGB Shade(const HitRecord& hitRecord = {}, const Vector3& l = {}, const Vector3& v = {}) override
 		{
-			//todo: W3
-			throw std::runtime_error("Not Implemented Yet");
-			return {};
+			return BRDF::Lambert(m_DiffuseReflectance,m_DiffuseColor) +
+			BRDF::Phong(m_SpecularReflectance, m_PhongExponent, l, v, hitRecord.normal);
 		}
 
 	private:
@@ -109,9 +106,48 @@ namespace dae
 
 		ColorRGB Shade(const HitRecord& hitRecord = {}, const Vector3& l = {}, const Vector3& v = {}) override
 		{
-			//todo: W3
-			throw std::runtime_error("Not Implemented Yet");
-			return {};
+			Vector3 h = (-v+l).Normalized();
+			ColorRGB f0{};
+			ColorRGB kd{};
+
+			if (m_Metalness == 0)
+			{
+				f0 = ColorRGB( 0.04f,0.04f, 0.04f );
+
+				kd = ColorRGB(1,1,1) - BRDF::FresnelFunction_Schlick(h, -v,f0);
+			}
+
+			else
+			{
+				f0 = m_Albedo;
+
+				kd = ColorRGB(0,0,0);
+			}
+
+			//NORMAL DISTRIBUTION
+			//float normaldistribution = BRDF::NormalDistribution_GGX(hitRecord.normal, h, m_Roughness);
+			//return ColorRGB(normaldistribution, normaldistribution, normaldistribution);
+
+			//GEOMETRIC FUNCTION SMITH
+			//float geoFuncSmith = BRDF::GeometryFunction_Smith(hitRecord.normal, -v, l, m_Roughness);
+			//return ColorRGB(geoFuncSmith, geoFuncSmith, geoFuncSmith);
+
+			//FRESNEL FUNCTION SCHLICK
+			//return BRDF::FresnelFunction_Schlick(h, -v, f0);
+
+			//COOK TORRANCE SPECULAR
+			ColorRGB fcolor (BRDF::NormalDistribution_GGX(hitRecord.normal,h,m_Roughness) * BRDF::FresnelFunction_Schlick(h, -v, f0) * BRDF::GeometryFunction_Smith(hitRecord.normal, -v, l, m_Roughness));
+
+			fcolor = fcolor / (4 * Vector3::Dot(-v, hitRecord.normal) * Vector3::Dot(l, hitRecord.normal));
+
+			//return fcolor;
+
+			//COOK TORRANCE DIFFUSE
+			//return BRDF::Lambert(kd, m_Albedo);
+
+			//FINAL COOK
+			return BRDF::Lambert(kd, m_Albedo) + fcolor;
+			
 		}
 
 	private:
