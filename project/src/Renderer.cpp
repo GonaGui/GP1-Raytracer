@@ -5,6 +5,7 @@
 //Project includes
 #include "Renderer.h"
 
+#include <execution>
 #include <iostream>
 
 #include "Maths.h"
@@ -24,7 +25,11 @@ Renderer::Renderer(SDL_Window * pWindow) :
 	m_AspectRatio = (m_Width / float(m_Height)) ;
 	m_pBufferPixels = static_cast<uint32_t*>(m_pBuffer->pixels);
 
+	m_HorizontalIterator.resize(m_Width);
+	m_VerticalIterator.resize(m_Height);
 
+	for (uint32_t i = 0; i < m_Width; i++) m_HorizontalIterator[i] = i;
+	for (uint32_t i = 0; i < m_Height; i++) m_VerticalIterator[i] = i;
 }
 
 void Renderer::Render(Scene* pScene) const
@@ -34,87 +39,173 @@ void Renderer::Render(Scene* pScene) const
 	auto& lights = pScene->GetLights();
 
 	const Matrix cameraToWorld = camera.CalculateCameraToWorld();
+	 
 
-	for (int px{}; px < m_Width; ++px)
+	if (m_IsMultiThreadingEnabled)
 	{
-		for (int py{}; py < m_Height; ++py)
-		{
-
-			//Sets screen to black
-			ColorRGB finalColor{ };
-
-			//creates a vector that holds a coordinate in 3D space dependent on which pixel the loop is on
-			Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio * camera.FOV),float((1 - 2 * ((py + 0.5) / m_Height)) * camera.FOV),1};
-			rayDirection.Normalize();
-			rayDirection = cameraToWorld.TransformVector(rayDirection);
-
-			//Creates a Ray from origin to the point where the current pixel in loop is
-			Ray viewRay{ camera.origin,rayDirection };
-
-			HitRecord closestHit{};
-			pScene->GetClosestHit(viewRay, closestHit);
-
-			if (closestHit.didHit)
+		std::for_each(std::execution::par ,m_HorizontalIterator.begin(), m_HorizontalIterator.end(), [this, camera, cameraToWorld, materials, lights, pScene](uint32_t px)
 			{
-				
-				for (int idx{ 0 }; idx < lights.size(); idx++)
-				{
-					Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx], closestHit.origin);
-					float maxRayLenght = lightVec.Normalize();
-					Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec, 0.0001f, maxRayLenght);
-					bool shadowDoesHit = pScene->DoesHit(shadowRay);
-					float observedArea = Vector3::Dot(closestHit.normal, lightVec);
-
-					if (observedArea > 0.f)
+				std::for_each(std::execution::par,m_VerticalIterator.begin(), m_VerticalIterator.end(), [this, px, camera, cameraToWorld, materials, lights, pScene](uint32_t py)
 					{
+						//Sets screen to black
+						ColorRGB finalColor{ };
 
-						if (!m_ShadowsEnabled or (m_ShadowsEnabled && !shadowDoesHit))
+						//creates a vector that holds a coordinate in 3D space dependent on which pixel the loop is on
+						Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio * camera.FOV),float((1 - 2 * ((py + 0.5) / m_Height)) * camera.FOV),1 };
+						rayDirection.Normalize();
+						rayDirection = cameraToWorld.TransformVector(rayDirection);
+
+						//Creates a Ray from origin to the point where the current pixel in loop is
+						Ray viewRay{ camera.origin,rayDirection };
+
+						HitRecord closestHit{};
+						pScene->GetClosestHit(viewRay, closestHit);
+
+						if (closestHit.didHit)
 						{
-							if (m_CurrentLightingMode == LightingMode::ObservedArea)
+
+							for (int idx{ 0 }; idx < lights.size(); idx++)
 							{
-								finalColor += ColorRGB{ observedArea,observedArea,observedArea };
+								Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx], closestHit.origin);
+								float maxRayLenght = lightVec.Normalize();
+								Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec, 0.0001f, maxRayLenght);
+								bool shadowDoesHit = pScene->DoesHit(shadowRay);
+								float observedArea = Vector3::Dot(closestHit.normal, lightVec);
+
+								if (observedArea > 0.f)
+								{
+
+									if (!m_ShadowsEnabled or (m_ShadowsEnabled && !shadowDoesHit))
+									{
+										if (m_CurrentLightingMode == LightingMode::ObservedArea)
+										{
+											finalColor += ColorRGB{ observedArea,observedArea,observedArea };
+										}
+
+										if (m_CurrentLightingMode == LightingMode::Radiance)
+										{
+											finalColor += LightUtils::GetRadiance(lights[idx], closestHit.origin);
+										}
+
+										if (m_CurrentLightingMode == LightingMode::BRDF)
+										{
+											finalColor += materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+										}
+
+										if (m_CurrentLightingMode == LightingMode::Combined)
+										{
+											ColorRGB ObservedArea = ColorRGB{ observedArea, observedArea,observedArea };
+
+											ColorRGB Radiance = LightUtils::GetRadiance(lights[idx], closestHit.origin);
+
+											ColorRGB BRDF = materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+
+											finalColor += Radiance * BRDF * ObservedArea;
+										}
+
+									}
+								}
+
 							}
 
-							if (m_CurrentLightingMode == LightingMode::Radiance)
-							{
-								finalColor += LightUtils::GetRadiance(lights[idx], closestHit.origin);
-							}
 
-							if (m_CurrentLightingMode == LightingMode::BRDF)
-							{
-								finalColor += materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
-							}
+							//const float scaled_t = (closestHit.t - 50.f) / 40.f; //shades spheres based on proximity
+							//finalColor = { scaled_t,scaled_t,scaled_t };
 
-							if (m_CurrentLightingMode == LightingMode::Combined)
-							{
-								ColorRGB ObservedArea = ColorRGB{ observedArea, observedArea,observedArea};
-
-								ColorRGB Radiance = LightUtils::GetRadiance(lights[idx], closestHit.origin);
-
-								ColorRGB BRDF = materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
-
-								finalColor += Radiance * BRDF * ObservedArea;
-							}
-
+							//const float scaled_t = (closestHit.t) / 500.f;    //shades planes based on proximity
+							//finalColor = { scaled_t,scaled_t,scaled_t };
 						}
+						//Update Color in Buffer
+						finalColor.MaxToOne();
+
+						m_pBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBuffer->format,
+							static_cast<uint8_t>(finalColor.r * 255),
+							static_cast<uint8_t>(finalColor.g * 255),
+							static_cast<uint8_t>(finalColor.b * 255));
+					});
+			});
+	}
+
+	else
+	{
+		for (int px{}; px < m_Width; ++px)
+		{
+			for (int py{}; py < m_Height; ++py)
+			{
+				//Sets screen to black
+				ColorRGB finalColor{ };
+
+				//creates a vector that holds a coordinate in 3D space dependent on which pixel the loop is on
+				Vector3 rayDirection{ float((2 * ((px + 0.5) / m_Width) - 1) * m_AspectRatio * camera.FOV),float((1 - 2 * ((py + 0.5) / m_Height)) * camera.FOV),1 };
+				rayDirection.Normalize();
+				rayDirection = cameraToWorld.TransformVector(rayDirection);
+
+				//Creates a Ray from origin to the point where the current pixel in loop is
+				Ray viewRay{ camera.origin,rayDirection };
+
+				HitRecord closestHit{};
+				pScene->GetClosestHit(viewRay, closestHit);
+
+				if (closestHit.didHit)
+				{
+
+					for (int idx{ 0 }; idx < lights.size(); idx++)
+					{
+						Vector3 lightVec = LightUtils::GetDirectionToLight(lights[idx], closestHit.origin);
+						float maxRayLenght = lightVec.Normalize();
+						Ray shadowRay(closestHit.origin + closestHit.normal * 0.0001f, lightVec, 0.0001f, maxRayLenght);
+						bool shadowDoesHit = pScene->DoesHit(shadowRay);
+						float observedArea = Vector3::Dot(closestHit.normal, lightVec);
+
+						if (observedArea > 0.f)
+						{
+
+							if (!m_ShadowsEnabled or (m_ShadowsEnabled && !shadowDoesHit))
+							{
+								if (m_CurrentLightingMode == LightingMode::ObservedArea)
+								{
+									finalColor += ColorRGB{ observedArea,observedArea,observedArea };
+								}
+
+								if (m_CurrentLightingMode == LightingMode::Radiance)
+								{
+									finalColor += LightUtils::GetRadiance(lights[idx], closestHit.origin);
+								}
+
+								if (m_CurrentLightingMode == LightingMode::BRDF)
+								{
+									finalColor += materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+								}
+
+								if (m_CurrentLightingMode == LightingMode::Combined)
+								{
+									ColorRGB ObservedArea = ColorRGB{ observedArea, observedArea,observedArea };
+
+									ColorRGB Radiance = LightUtils::GetRadiance(lights[idx], closestHit.origin);
+
+									ColorRGB BRDF = materials[closestHit.materialIndex]->Shade(closestHit, lightVec, viewRay.direction);
+
+									finalColor += Radiance * BRDF * ObservedArea;
+								}
+
+							}
+						}
+
 					}
+					//const float scaled_t = (closestHit.t - 50.f) / 40.f; //shades spheres based on proximity
+					//finalColor = { scaled_t,scaled_t,scaled_t };
 
+					//const float scaled_t = (closestHit.t) / 500.f;    //shades planes based on proximity
+					//finalColor = { scaled_t,scaled_t,scaled_t };
 				}
-				
+				//Update Color in Buffer
+				finalColor.MaxToOne();
 
-				//const float scaled_t = (closestHit.t - 50.f) / 40.f; //shades spheres based on proximity
-				//finalColor = { scaled_t,scaled_t,scaled_t };
-
-				//const float scaled_t = (closestHit.t) / 500.f;    //shades planes based on proximity
-				//finalColor = { scaled_t,scaled_t,scaled_t };
+				m_pBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBuffer->format,
+					static_cast<uint8_t>(finalColor.r * 255),
+					static_cast<uint8_t>(finalColor.g * 255),
+					static_cast<uint8_t>(finalColor.b * 255));
 			}
-			//Update Color in Buffer
-			finalColor.MaxToOne();
-
-			m_pBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBuffer->format,
-				static_cast<uint8_t>(finalColor.r * 255),
-				static_cast<uint8_t>(finalColor.g * 255),
-				static_cast<uint8_t>(finalColor.b * 255));
 		}
 	}
 

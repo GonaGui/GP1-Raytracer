@@ -325,7 +325,7 @@ namespace dae {
 	}
 
 
-	void Scene_W4::Initialize()
+	void Scene_W4_Bunny::Initialize()
 	{
 		m_Camera.origin = { 0.f, 1.f, -5.f };
 		m_Camera.fovAngle = 45.f;
@@ -366,7 +366,7 @@ namespace dae {
 
 
 		pMesh = AddTriangleMesh(TriangleCullMode::BackFaceCulling, matLambert_White);
-		Utils::ParseOBJ("Resources/Warlock.obj", 
+		Utils::ParseOBJ("Resources/lowpoly_bunny.obj", 
 						pMesh->positions,
 						pMesh->normals,
 						pMesh->indices);
@@ -382,18 +382,18 @@ namespace dae {
 
 		//pMesh->CalculateNormals();
 		//pMesh->Translate({ 0.f,1.5f,0.f });
-		pMesh->RotateY(90);
+		pMesh->RotateY(60);
 		pMesh->UpdateTransforms();
 
 
 
 		// Light
 		AddPointLight({ 0.f, 5.f, 5.f }, 50.f, ColorRGB{ 1.f, .61f, .45f });  // Backlight
-		//AddPointLight({ -2.5f, 5.f, -5.f }, 70.f, ColorRGB{ 1.f, .8f, .45f }); // Front Light Left
-		//AddPointLight({ 2.5f, 5.f, -5.f }, 50.f, ColorRGB{ .34f, .47f, .68f }); // Front Light Right
+		AddPointLight({ -2.5f, 5.f, -5.f }, 70.f, ColorRGB{ 1.f, .8f, .45f }); // Front Light Left
+		AddPointLight({ 2.5f, 5.f, -5.f }, 50.f, ColorRGB{ .34f, .47f, .68f }); // Front Light Right
 	}
 
-	void Scene_W4::Update(dae::Timer* pTimer)
+	void Scene_W4_Bunny::Update(dae::Timer* pTimer)
 	{
 		Scene::Update(pTimer);
 	}

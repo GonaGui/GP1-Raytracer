@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -39,6 +40,8 @@ namespace dae
 			
 		};
 		void ToggleShadows() { m_ShadowsEnabled = !m_ShadowsEnabled; }
+		void ToggleMultiThreading() { m_IsMultiThreadingEnabled = !m_IsMultiThreadingEnabled; }
+
 
 	private:
 
@@ -52,6 +55,7 @@ namespace dae
 
 		LightingMode m_CurrentLightingMode{LightingMode::Combined};
 		bool m_ShadowsEnabled{true};
+		bool m_IsMultiThreadingEnabled{ true };
 		SDL_Window* m_pWindow{};
 
 		SDL_Surface* m_pBuffer{};
@@ -60,5 +64,7 @@ namespace dae
 		int m_Width{};
 		int m_Height{};
 		float m_AspectRatio{};
+
+		std::vector<uint32_t> m_HorizontalIterator, m_VerticalIterator;
 	};
 }

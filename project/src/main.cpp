@@ -48,7 +48,9 @@ int main(int argc, char* args[])
 	const auto pRenderer = new Renderer(pWindow);
 
 	const auto pScene = new Scene_W4_ReferenceScene();
+	const auto pScene2 = new Scene_W4_Bunny();
 	pScene->Initialize();
+	pScene2->Initialize();
 
 
 	//Start loop
@@ -60,6 +62,7 @@ int main(int argc, char* args[])
 	float printTimer = 0.f;
 	bool isLooping = true;
 	bool takeScreenshot = false;
+	bool isBunnyScene = false;
 	while (isLooping)
 	{
 		//--------- Get input events ---------
@@ -82,6 +85,14 @@ int main(int argc, char* args[])
 				{
 					pRenderer->CycleLightingMode();
 				}
+				if (e.key.keysym.scancode == SDL_SCANCODE_F4)
+				{
+					pRenderer->ToggleMultiThreading();
+				}
+				if (e.key.keysym.scancode == SDL_SCANCODE_F5)
+				{
+					isBunnyScene = !isBunnyScene;
+				}
 				break;
 			}
 
@@ -91,10 +102,26 @@ int main(int argc, char* args[])
 
 
 		//--------- Update ---------
-		pScene->Update(pTimer);
+		if (isBunnyScene)
+		{
+			pScene2->Update(pTimer);
+		}
+		else
+		{
+			pScene->Update(pTimer);
+		}
+	
 
 		//--------- Render ---------
-		pRenderer->Render(pScene);
+		if (isBunnyScene)
+		{
+			pRenderer->Render(pScene2);
+		}
+		else
+		{
+			pRenderer->Render(pScene);
+		}
+		
 
 		//--------- Timer ---------
 		pTimer->Update();
@@ -119,6 +146,7 @@ int main(int argc, char* args[])
 
 	//Shutdown "framework"
 	delete pScene;
+	delete pScene2;
 	delete pRenderer;
 	delete pTimer;
 
