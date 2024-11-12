@@ -136,7 +136,9 @@ namespace dae
 			//return BRDF::FresnelFunction_Schlick(h, -v, f0);
 
 			//COOK TORRANCE SPECULAR
-			ColorRGB fcolor (BRDF::NormalDistribution_GGX(hitRecord.normal,h,m_Roughness) * BRDF::FresnelFunction_Schlick(h, -v, f0) * BRDF::GeometryFunction_Smith(hitRecord.normal, -v, l, m_Roughness));
+			ColorRGB fcolor (BRDF::NormalDistribution_GGX(hitRecord.normal,h,m_Roughness) * 
+								BRDF::FresnelFunction_Schlick(h, -v, f0)					* 
+								BRDF::GeometryFunction_Smith(hitRecord.normal, -v, l, m_Roughness));
 
 			fcolor = fcolor / (4 * Vector3::Dot(-v, hitRecord.normal) * Vector3::Dot(l, hitRecord.normal));
 
