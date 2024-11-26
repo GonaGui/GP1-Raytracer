@@ -1,12 +1,16 @@
 #pragma once
+#include <filesystem>
 #include <stdexcept>
 #include <vector>
+#include "BVH.h"
 
 #include "Maths.h"
 
 
 namespace dae
 {
+	struct TriangleMesh;
+	struct Ray;
 #pragma region GEOMETRY
 	struct Sphere
 	{
@@ -57,6 +61,7 @@ namespace dae
 
 	struct TriangleMesh
 	{
+
 		TriangleMesh() = default;
 		TriangleMesh(const std::vector<Vector3>& _positions, const std::vector<int>& _indices, TriangleCullMode _cullMode) :
 			positions(_positions), indices(_indices), cullMode(_cullMode)
@@ -78,6 +83,7 @@ namespace dae
 		std::vector<Vector3> normals{};
 		std::vector<int> indices{};
 		unsigned char materialIndex{};
+		
 
 		TriangleCullMode cullMode{ TriangleCullMode::BackFaceCulling };
 
@@ -93,6 +99,8 @@ namespace dae
 
 		std::vector<Vector3> transformedPositions{};
 		std::vector<Vector3> transformedNormals{};
+		BVH* bvh;
+
 
 		void Translate(const Vector3& translation)
 		{
@@ -174,62 +182,19 @@ namespace dae
 				transformedPositions.emplace_back(FullTransformMatrix.TransformPoint(p));
 			}
 
-			UpdateTransformedAABB(FullTransformMatrix);
+			if (bvh != nullptr) bvh->BuildBVH();
 		}
 
-		void UpdateAABB()
+		void BuildBVH()
 		{
-			if (positions.size() > 0)
-			{
-				minAABB = positions[0];
-				maxAABB = positions[0];
-				for (auto& p: positions)
-				{
-					minAABB = Vector3::Min(p, minAABB);
-					maxAABB = Vector3::Max(p, maxAABB);
-				}
-			}
+			bvh = new BVH(this);
+			bvh->BuildBVH();
 		}
 
-		void UpdateTransformedAABB(const Matrix& finalTransform)
-		{
-			// AABB update: be careful - transform the 8 vertices of the aabb
-			// and calculate new min and max.
-			Vector3 tMinAABB = finalTransform.TransformPoint(minAABB);
-			Vector3 tMaxAABB = tMinAABB;
-
-			Vector3 tAABB = finalTransform.TransformPoint(maxAABB.x, minAABB.y, minAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(maxAABB.x, minAABB.y, maxAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(minAABB.x, minAABB.y, maxAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(minAABB.x, maxAABB.y, minAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(maxAABB.x, maxAABB.y, minAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(maxAABB);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			tAABB = finalTransform.TransformPoint(minAABB.x, maxAABB.y, maxAABB.z);
-			tMinAABB = Vector3::Min(tAABB, tMinAABB);
-			tMaxAABB = Vector3::Max(tAABB, tMaxAABB);
-
-			transformedMinAABB = tMinAABB;
-			transformedMaxAABB = tMaxAABB;
-		}
 	};
+
+
+	
 #pragma endregion
 #pragma region LIGHT
 	enum class LightType
